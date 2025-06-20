@@ -1,0 +1,139 @@
+name: Task_06 Evaluation
+
+on:
+  push:
+    paths:
+      - 'uploads/task06/**'
+  pull_request:
+    paths:
+      - 'uploads/task06/**'
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate-task06:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file existence
+      run: |
+        if [ ! -f "uploads/task06/sc_launcher.c" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+        if [ ! -f "uploads/task06/shellcode.h" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+
+    - name: Validate shellcode.h format
+      run: |
+        cd uploads/task06/
+        if grep -E "unsigned char shellcode\[\]" shellcode.h > /dev/null; then
+          echo "✅ shellcode array declaration found"
+        else
+          echo "❌ shellcode array declaration not found"
+          exit 1
+        fi
+        if grep -E "unsigned int shellcode_len" shellcode.h > /dev/null; then
+          echo "✅ shellcode_len declaration found"
+        else
+          echo "❌ shellcode_len declaration not found"
+          exit 1
+        fi
+
+    - name: Check for forbidden functions
+      run: |
+        cd uploads/task06/
+        if grep -E "(system|execve)" sc_launcher.c > /dev/null; then
+          echo "❌ Forbidden functions found"
+          exit 1
+        fi
+        if grep -E "(mmap)" sc_launcher.c > /dev/null; then
+          echo "✅ Required functions found"
+        else
+          echo "❌ Required functions not found"
+          exit 1
+        fi
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y expect
+
+    - name: Compile the program
+      run: |
+        cd uploads/task06/
+        cc -Wall -Wextra -Werror -o sc_launcher sc_launcher.c
+
+    - name: Test shellcode launcher execution
+      run: |
+        cd uploads/task06/
+        cat > test_launcher.exp << 'EOF'
+        #!/usr/bin/expect -f
+        set timeout 10
+        spawn ./sc_launcher
+        expect {
+            "$" { 
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            "#" {
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            timeout {
+                puts "❌ Timeout"
+                exit 1
+            }
+            eof {
+                puts "❌ Unexpected exit"
+                exit 1
+            }
+        }
+        EOF
+        chmod +x test_launcher.exp
+        if ./test_launcher.exp; then
+          echo "✅ OK"
+        fi
+
+    - name: Update README with completion message
+      if: success()
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+
+        python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        completion_message = """🎉 Congratulations! You have successfully completed all tasks in this class!"""
+        task_pattern = r'(# Task_\d+)\n.*?(?=\Z)'
+        updated_content = re.sub(
+            task_pattern, 
+            completion_message, 
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+
+    - name: Commit README changes
+      if: success()
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git commit -m "🌀 All tasks completed - Class finished!" || exit 0
+        git push

@@ -1,0 +1,123 @@
+name: Task_04 Evaluation
+
+on:
+  push:
+    paths:
+      - 'uploads/task04/**'
+  pull_request:
+    paths:
+      - 'uploads/task04/**'
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate-task04:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file existence
+      run: |
+        if [ ! -f "uploads/task04/shell_exec.s" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+
+    - name: Validate assembly requirements
+      run: |
+        cd uploads/task04/
+        if grep -i "section.*\.data\|\.data" shell_exec.s > /dev/null; then
+          echo "✅ .data section usage detected"
+        else
+          echo "❌ .data section not found"
+          exit 1
+        fi
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm expect
+
+    - name: Assemble and link the program
+      run: |
+        cd uploads/task04/
+        nasm -f elf64 -o shell_exec.o shell_exec.s
+        ld -o shell_exec shell_exec.o
+
+
+    - name: Test shell execution
+      run: |
+        cd uploads/task04/
+        cat > test_shell.exp << 'EOF'
+        #!/usr/bin/expect -f
+        set timeout 10
+        spawn ./shell_exec
+        expect {
+            "$" { 
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            "#" {
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            timeout {
+                puts "❌ Timeout"
+                exit 1
+            }
+            eof {
+                puts "❌ Unexpected exit"
+                exit 1
+            }
+        }
+        EOF
+        chmod +x test_shell.exp
+        if ./test_shell.exp; then
+          echo "✅ OK"
+        fi
+
+    - name: Update README with next task
+      if: success()
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+        if [ -f ".github/subjects/task05.md" ]; then
+          cp .github/subjects/task05.md current_task.md
+          sed -i "s/OWNER/$OWNER/g" current_task.md
+          sed -i "s/REPO/$REPO/g" current_task.md
+          python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        with open('current_task.md', 'r') as f:
+            task_content = f.read()
+        task_pattern = r'(# Task_\d+)\n.*?(?=\Z)'
+        updated_content = re.sub(
+            task_pattern, 
+            task_content.strip(), 
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+          rm current_task.md
+        fi
+
+    - name: Commit README changes
+      if: success()
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git commit -m "✅ Task_04 successfully passed" || exit 0
+        git push

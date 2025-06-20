@@ -1,0 +1,102 @@
+name: Task_02 Evaluation
+
+on:
+  push:
+    paths:
+      - 'uploads/task02/**'
+  pull_request:
+    paths:
+      - 'uploads/task02/**'
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate-task02:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file existence
+      run: |
+        if [ ! -f "uploads/task02/return_42.s" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+
+    - name: Validate assembly syntax
+      run: |
+        cd uploads/task02/
+        if grep -i "section\|global\|mov\|syscall" return_42.s > /dev/null; then
+          echo "✅ Assembly syntax looks correct"
+        else
+          echo "❌ Incorrect assembly syntax detected"
+          exit 1
+        fi
+        if grep -E "(rax|rdi|syscall)" return_42.s > /dev/null; then
+          echo "✅ x86-64 instructions detected"
+        else
+          echo "❌ x86-64 instructions not found"
+          exit 1
+        fi
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm
+
+    - name: Assemble and link the program
+      run: |
+        cd uploads/task02/
+        nasm -f elf64 -o return_42.o return_42.s
+        ld -o return_42 return_42.o
+
+    - name: Test program execution
+      run: |
+        cd uploads/task02/
+        ./return_42 || exit_code=$?
+        if [ $exit_code -eq 42 ]; then
+          echo "✅ OK"
+        else
+          echo "❌ KO"
+          exit 1
+        fi
+
+    - name: Update README with next task
+      if: success()
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+        if [ -f ".github/subjects/task03.md" ]; then
+          cp .github/subjects/task03.md current_task.md
+          sed -i "s/OWNER/$OWNER/g" current_task.md
+          sed -i "s/REPO/$REPO/g" current_task.md
+          python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        with open('current_task.md', 'r') as f:
+            task_content = f.read()
+        task_pattern = r'(# Task_\d+)\n.*?(?=\Z)'
+        updated_content = re.sub(
+            task_pattern, 
+            task_content.strip(), 
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+          rm current_task.md
+        fi
+
+    - name: Commit README changes
+      if: success()
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git commit -m "✅ Task_02 successfully passed" || exit 0
+        git push

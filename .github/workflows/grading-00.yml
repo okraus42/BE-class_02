@@ -1,0 +1,64 @@
+name: Task_00 Evaluation
+
+on:
+  push:
+    paths:
+      - 'uploads/task00/**'
+  pull_request:
+    paths:
+      - 'uploads/task00/**'
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate-task00:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check file existence
+      run: |
+        if [ ! -f "uploads/task00/42_cyber" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+
+    - name: Update README with next task
+      if: success()
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+        cp .github/subjects/task01.md next_task.md
+        sed -i "s/OWNER/$OWNER/g" next_task.md
+        sed -i "s/REPO/$REPO/g" next_task.md
+        python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        with open('next_task.md', 'r') as f:
+            task_content = f.read()
+        task_pattern = r'(# Task_\d+)\n.*?(?=\Z)'
+        updated_content = re.sub(
+            task_pattern, 
+            task_content.strip(), 
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+        rm next_task.md
+
+    - name: Commit next task
+      if: success()
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git diff --staged --quiet || git commit -m "✅ Task_00 successfully passed"
+        git push

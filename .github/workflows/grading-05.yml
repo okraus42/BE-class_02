@@ -1,0 +1,162 @@
+name: Task_05 Evaluation
+
+on:
+  push:
+    paths:
+      - 'uploads/task05/**'
+  pull_request:
+    paths:
+      - 'uploads/task05/**'
+
+permissions:
+  contents: write
+
+jobs:
+  evaluate-task05:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file existence
+      run: |
+        if [ ! -f "uploads/task05/shell_exec_ind.s" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+        if [ ! -f "uploads/task05/shellcode.h" ]; then
+          echo "❌ Submission file not found"
+          exit 1
+        fi
+
+    - name: Validate position-independence requirements
+      run: |
+        cd uploads/task05/
+        if grep -i "section.*\.data\|\.data" shell_exec_ind.s > /dev/null; then
+          echo "❌ .data section found - position-independent code required"
+          exit 1
+        else
+          echo "✅ Position-independent requirement met"
+        fi
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nasm expect xxd
+
+    - name: Assemble and link the program
+      run: |
+        cd uploads/task05/
+        nasm -f elf64 -o shell_exec_ind.o shell_exec_ind.s
+        ld -o shell_exec_ind shell_exec_ind.o
+
+    - name: Validate shellcode.h format
+      run: |
+        cd uploads/task05/
+        if grep -E "unsigned char shellcode\[\]" shellcode.h > /dev/null; then
+          echo "✅ shellcode array declaration found"
+        else
+          echo "❌ shellcode array declaration not found"
+          exit 1
+        fi
+        if grep -E "unsigned int shellcode_len" shellcode.h > /dev/null; then
+          echo "✅ shellcode_len declaration found"
+        else
+          echo "❌ shellcode_len declaration not found"
+          exit 1
+        fi
+
+    - name: Test shell execution
+      run: |
+        cd uploads/task05/
+        cat > test_shell.exp << 'EOF'
+        #!/usr/bin/expect -f
+        set timeout 10
+        spawn ./shell_exec_ind
+        expect {
+            "$" { 
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            "#" {
+                send "echo 'Shell test successful'\r"
+                expect "Shell test successful"
+                send "exit\r"
+                expect eof
+                exit 0
+            }
+            timeout {
+                puts "❌ Timeout"
+                exit 1
+            }
+            eof {
+                puts "❌ Unexpected exit"
+                exit 1
+            }
+        }
+        EOF
+        chmod +x test_shell.exp
+        if ./test_shell.exp; then
+          echo "✅ OK"
+        fi
+
+    - name: Generate and compare shellcode
+      run: |
+        cd uploads/task05/
+        objcopy -O binary --only-section=.text shell_exec_ind.o shellcode.bin
+        if [ -f "shellcode.bin" ]; then
+          echo "✅ Binary shellcode extracted"
+          xxd -i shellcode.bin > generated_shellcode.h
+          generated_size=$(wc -c < shellcode.bin)
+          provided_size=$(grep -o 'shellcode_len = [0-9]*' shellcode.h | grep -o '[0-9]*' || echo "0")
+          if [ "$generated_size" -eq "$provided_size" ]; then
+            echo "✅ Shellcode sizes match"
+          else
+            echo "❌ Shellcode sizes don't match"
+            exit 1
+          fi
+        else
+          echo "❌ Could not extract binary shellcode"
+          exit 1
+        fi
+
+    - name: Update README with next task
+      if: success()
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+        if [ -f ".github/subjects/task06.md" ]; then
+          cp .github/subjects/task06.md current_task.md
+          sed -i "s/OWNER/$OWNER/g" current_task.md
+          sed -i "s/REPO/$REPO/g" current_task.md
+          python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        with open('current_task.md', 'r') as f:
+            task_content = f.read()
+        task_pattern = r'(# Task_\d+)\n.*?(?=\Z)'
+        updated_content = re.sub(
+            task_pattern, 
+            task_content.strip(), 
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+          rm current_task.md
+        fi
+
+    - name: Commit README changes
+      if: success()
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git commit -m "✅ Task_05 successfully passed" || exit 0
+        git push

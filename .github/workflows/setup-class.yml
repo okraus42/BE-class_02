@@ -1,0 +1,63 @@
+name: Setup Class
+
+on:
+  push:
+    paths:
+      - 'uploads/start'
+
+permissions:
+  contents: write
+
+jobs:
+  setup-class:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check if start file exists
+      id: check_start
+      run: |
+        if [ -f "uploads/start" ]; then
+          echo "start_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "start_exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Update README with first task
+      if: steps.check_start.outputs.start_exists == 'true'
+      run: |
+        OWNER="${{ github.repository_owner }}"
+        REPO="${{ github.event.repository.name }}"
+        cp .github/subjects/task00.md current_task.md
+        sed -i "s/OWNER/$OWNER/g" current_task.md
+        sed -i "s/REPO/$REPO/g" current_task.md
+        python3 << 'PYTHON_SCRIPT'
+        import re
+        with open('README.md', 'r') as f:
+            content = f.read()
+        with open('current_task.md', 'r') as f:
+            task_content = f.read()
+        intro_pattern = r'# Introduction\n.*?(?=\Z)'
+        updated_content = re.sub(
+            intro_pattern,
+            task_content.strip(),
+            content, 
+            flags=re.DOTALL
+        )
+        with open('README.md', 'w') as f:
+            f.write(updated_content)
+        PYTHON_SCRIPT
+        rm current_task.md
+
+    - name: Commit changes
+      if: steps.check_start.outputs.start_exists == 'true'
+      run: |
+        git config --local user.email "batidora-action@github.com"
+        git config --local user.name "🌀 batidora"
+        git add README.md
+        git commit -m "✅ Task_00 activated"
+        git push
