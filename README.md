@@ -1,31 +1,27 @@
-# Task_05
-Create a program that executes a shell (`/bin/sh`) using x86-64 Assembly with Intel syntax. You must not use `.data` section, thus your code must be position-independent.
-
-After creating your assembly program, you must generate a C header file containing the shellcode bytes that can be used in other programs.
+# Task_06
+Create a shellcode launcher program in C that dynamically loads and executes the position-independent shellcode from `Task_05`. The program should use the `shellcode.h` header file generated in the previous task to load and execute the shellcode in memory. You must use `mmap` to allocate memory with read, write, and execute permissions for the shellcode.
 
 > [!IMPORTANT]
 > Always run `git pull` before commiting/pushing your solutions.
 
 ## Constraints
-- turn-in directory: `uploads/task05/`
-- files to turn in: `shell_exec_ind.s`, `shellcode.h`
-- compilation method: `nasm`
-- linking method: `ld`
+- turn-in directory: `uploads/task06/`
+- files to turn in: `sc_launcher.c`, `shellcode.h`
+- compilation method: `cc`
+- allowed functions: `mmap`, `memcpy`
+- forbidden functions: `system`, `execve`
 
-## Expected output
-The shellcode may be different, but the file structure must match.
-``` bash
-> cat shellcode.h
-unsigned char shellcode[] = {
-  0x48, 0x31, 0xf6, 0x56, 0x48, 0xbf, 0x2f, 0x2f, 0x62, 0x69, 0x6e, 0x2f,
-  0x73, 0x68, 0x57, 0x48, 0x89, 0xe7, 0x48, 0x31, 0xd2, 0xb8, 0x3b, 0x00,
-  0x00, 0x00, 0x0f, 0x05
-};
-unsigned int shellcode_len = 28;
+## Expected behavior
+```bash
+> ./sc_launcher
+$ echo "I'm now in a shell!"
+I'm now in a shell!
+$ exit
+>
 ```
 
 > [!TIP]
-> You might find `objcopy -O binary --only-section=.text` and `xxd -i` useful.
+> You might find `((void(*)())ptr)();` useful.
 
 # Grading
-![Grading-05](https://github.com/okraus42/BE-class_02/actions/workflows/grading-05.yml/badge.svg)
+![Grading-06](https://github.com/okraus42/BE-class_02/actions/workflows/grading-06.yml/badge.svg)
