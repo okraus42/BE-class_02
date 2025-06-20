@@ -1,21 +1,22 @@
-# Task_02
-First, analyze the executable from `Task_01` using `objdump` to understand how the compiler generates assembly code. Then recreate the same functionality using x86-64 Assembly with Intel syntax.
+# Task_03
+Create a program that prints "Hello World!" to standard output and exits with a custom exit code (4242) using x86-64 Assembly with Intel syntax.
 
 > [!IMPORTANT]
 > Always run `git pull` before commiting/pushing your solutions.
 
 ## Constraints
-- turn-in directory: `uploads/task02/`
-- files to turn in: `return_42.s`
+- turn-in directory: `uploads/task03/`
+- files to turn in: `hello_world.s`
 - compilation method: `nasm`
 - linking method: `ld`
 
 ## Expected output
 ``` bash
-> ./return_42
-> echo $?
-42
+> ./hello_world; echo $?
+Hello World!
+146
+>
 ```
 
 # Grading
-![Grading-02](https://github.com/okraus42/BE-class_02/actions/workflows/grading-02.yml/badge.svg)
+![Grading-03](https://github.com/okraus42/BE-class_02/actions/workflows/grading-03.yml/badge.svg)
