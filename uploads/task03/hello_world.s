@@ -1,5 +1,5 @@
 section      .data                     ; this is where variables are initialized
-    msg      db   "Hello, World!", 0xa ; 0xa is a newline
+    msg      db   "Hello, World!"      ; 0xa is a newline
     msglen   equ  $ - msg
 
 section      .text                     ; this is the code section
