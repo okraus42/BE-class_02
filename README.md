@@ -1,22 +1,23 @@
-# Task_03
-Create a program that prints "Hello World!" to standard output and exits with a custom exit code (4242) using x86-64 Assembly with Intel syntax.
+# Task_04
+Create a program that executes a shell (`/bin/sh`) using x86-64 Assembly with Intel syntax. For this exercise, you have to use reference to `.data`.
 
 > [!IMPORTANT]
 > Always run `git pull` before commiting/pushing your solutions.
 
 ## Constraints
-- turn-in directory: `uploads/task03/`
-- files to turn in: `hello_world.s`
+- turn-in directory: `uploads/task04/`
+- files to turn in: `shell_exec.s`
 - compilation method: `nasm`
 - linking method: `ld`
 
 ## Expected output
 ``` bash
-> ./hello_world; echo $?
-Hello World!
-146
+> ./shell_exec
+$ echo "I'm now in a shell!"
+I'm now in a shell!
+$ exit
 >
 ```
 
 # Grading
-![Grading-03](https://github.com/okraus42/BE-class_02/actions/workflows/grading-03.yml/badge.svg)
+![Grading-04](https://github.com/okraus42/BE-class_02/actions/workflows/grading-04.yml/badge.svg)
