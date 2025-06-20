@@ -1,14 +1,14 @@
-# Task_01
-Create a simple C program that exits with the return code 42.
+# Task_02
+First, analyze the executable from `Task_01` using `objdump` to understand how the compiler generates assembly code. Then recreate the same functionality using x86-64 Assembly with Intel syntax.
 
 > [!IMPORTANT]
 > Always run `git pull` before commiting/pushing your solutions.
 
 ## Constraints
-- turn-in directory: `uploads/task01/`
-- files to turn in: `return_42.c`
-- allowed functions: none
-- compilation method: `cc`
+- turn-in directory: `uploads/task02/`
+- files to turn in: `return_42.s`
+- compilation method: `nasm`
+- linking method: `ld`
 
 ## Expected output
 ``` bash
@@ -18,4 +18,4 @@ Create a simple C program that exits with the return code 42.
 ```
 
 # Grading
-![Grading-01](https://github.com/okraus42/BE-class_02/actions/workflows/grading-01.yml/badge.svg)
+![Grading-02](https://github.com/okraus42/BE-class_02/actions/workflows/grading-02.yml/badge.svg)
